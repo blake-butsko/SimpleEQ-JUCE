@@ -129,6 +129,8 @@ bool SimpleEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
 }
 #endif
 
+// AudioBuffer is the object of the audio data that is being passed into the plugin
+// MidiBuffer is the object of the midi data that is being passed into the plugin
 void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -154,7 +156,7 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     {
         auto* channelData = buffer.getWritePointer (channel);
 
-        // ..do something to the data...
+        // ..do something to the data... - Blake - In the time alloted (how much time do we have tho)
     }
 }
 
@@ -166,7 +168,8 @@ bool SimpleEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* SimpleEQAudioProcessor::createEditor()
 {
-    return new SimpleEQAudioProcessorEditor (*this);
+    //return new SimpleEQAudioProcessorEditor (*this);
+    return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -181,6 +184,56 @@ void SimpleEQAudioProcessor::setStateInformation (const void* data, int sizeInBy
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+}
+
+// Custom code
+//sets audio parameters
+juce::AudioProcessorValueTreeState::ParameterLayout
+SimpleEQAudioProcessor::createParameterLayout()
+{
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    // This will be the parameter for the low band (refer to Readme.txt), AudioParameter has alot of other Built in audio parameter types
+    // To go along with the knobs and sliders that they relate to like choice or int
+    // We do the "make_unique" because it needs a unique pointer
+    // Default value set to 20.f (20hz) because that's the bottom of the human hearing range and we don't wanna hear it doing anything
+    // unless we actually move it
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "LowCut Freq", "LowCut Freq", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20.f
+    )
+    );
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "HighCut Freq", "HighCut Freq", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 20000.f)
+    );
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Freq", "Peak Freq", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.f), 750.f)
+    );
+    // Default is 0 since we don't want it to do anything by default
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Gain", "Peak Gain", juce::NormalisableRange<float>(-24.f, 24.f, 0.5f, 1.f), 0.0f)
+    );
+    // Abstract soley based on "Q value" 0.1-10
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "Peak Quality", "Peak Quality", juce::NormalisableRange<float>(0.1f, 10.f, 0.05f, 1.f), 1.f)
+    );
+
+    // For the lowcut/highcut we want to modify the steepness of the cut - The steepness of the filter is measured in decibels per octave
+    // the way the math behind the filter equations works ends up expressing these choices in multiples of 6 or 12 - se we have four
+    // choices of 12, 24, 36, 48 - since these are choices we use a different function
+
+    // Makes array of those multiples
+    juce::StringArray stringArray;
+    for (int i = 0; i < 4; i++) 
+    {
+        juce::String str;
+        str << (12 + i * 12);
+        str << " db/Oct";
+        stringArray.add(str);
+    }
+
+    layout.add(std::make_unique<juce::AudioParameterChoice>("LowCut Slope", "LowCut Slope", stringArray, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>("HighCut Slope", "HighCut Slope", stringArray, 0));
+
+    return layout;
 }
 
 //==============================================================================

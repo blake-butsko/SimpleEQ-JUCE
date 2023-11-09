@@ -9,6 +9,11 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+// The PluginEditor is all the visual components of the plugin
+
+// we're going to be making child components to represent the knobs and the sliders and the spectrum analyzer and the response curve
+// then we're going to be drawing them in there based on audio parameters
+
 //==============================================================================
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
