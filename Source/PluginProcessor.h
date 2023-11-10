@@ -74,6 +74,18 @@ public:
     juce::AudioProcessorValueTreeState apvts{ *this, nullptr, "Parameters", createParameterLayout() };
 
 private:
+    // Making Alias to cut down on repition of namespaces and other stuff when converting our DSP from mono (default of JUCE) to Stereo
+    using Filter = juce::dsp::IIR::Filter<float>; // each of these filters work on 12 decibles per octave, so if we want a cutoff of 48 we'll need 4
+    // define chain then processing context that will run througn each element - important JUCE workflow
+    // So if we put four of these filters in a processing chain then we will only need to pass it a single context to have it process everything
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+
+    // Now that we have this we can define a chain for the whole monosignal path LowCut -> Parametric -> HighCut
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+
+    // Now for stero, we'll do two
+    MonoChain leftChain, rightChain;
+ 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 };

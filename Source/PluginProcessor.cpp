@@ -95,6 +95,20 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+
+    // Prepare filters before we use them - pass process spec obj to the chains which then passes it to each link in that chain
+
+    juce::dsp::ProcessSpec spec;
+
+    spec.maximumBlockSize = samplesPerBlock;
+
+    // Mono can only handle one at a time
+    spec.numChannels = 1;
+
+    spec.sampleRate = sampleRate;
+
+    leftChain.prepare(spec);
+    rightChain.prepare(spec);
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -148,16 +162,19 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
     // This is the place where you'd normally do the guts of your plugin's
     // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
+    juce::dsp::AudioBlock<float> block(buffer);
+    // get the left and right blocks from the buffer - Stereo
+    auto leftBlock = block.getSingleChannelBlock(0);
+    auto rightBlock = block.getSingleChannelBlock(1);
+    // Got the blocks then put the wrapper of context aorund it so the chain can use it
+    juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
 
-        // ..do something to the data... - Blake - In the time alloted (how much time do we have tho)
-    }
+    // Here's the two chains we defined in the header that we're passing the context of the buffer to
+    leftChain.process(leftContext);
+    rightChain.process(rightContext);
+
+
 }
 
 //==============================================================================
